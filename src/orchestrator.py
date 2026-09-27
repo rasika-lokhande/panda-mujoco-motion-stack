@@ -15,6 +15,7 @@ from src.controller import controller
 from src.motion_planner import plan_path
 from src.transforms import homog_to_R_p, R_to_quat
 from src.q_validity_check import is_valid, check_collision, check_joint_limits
+from src.viz import draw_markers, path_to_ee_positions
 
 def get_valid_target_q(sim, target_pos, target_quat, max_attempts=5):
     for attempt in range(max_attempts):
@@ -37,13 +38,15 @@ def move_to_target(sim: SimInterface, target_pos, target_quat,
                     settle_window=0.1, settle_window_intermediate=0.0,
                     failure_retries=3,
                     planner_kwargs=None,
-                    viewer=None, q_start=None):
+                    viewer=None, q_start=None, before_execute=None):
 
     planner_kwargs = planner_kwargs or {}
 
     if q_start is None:
         q_start = np.array(sim.get_current_joint_angles_list())
 
+
+    draw_markers(viewer, target_pos, target_quat)
 
     q_goal = get_valid_target_q(sim, target_pos, target_quat)
     if q_goal is None:
@@ -53,6 +56,12 @@ def move_to_target(sim: SimInterface, target_pos, target_quat,
     path = plan_path(sim, q_start, q_goal, **planner_kwargs)
     if path is None:
         raise RuntimeError(f"No path found from q_start={q_start} to q_goal={q_goal}")
+    sim.set_joint_angles(q_start)  # IK/collision checks leave qpos at the last checked config
+    if viewer is not None:
+        draw_markers(viewer, target_pos, target_quat, path_to_ee_positions(sim, path))
+
+    if before_execute is not None:
+        before_execute()  # e.g. wait for a keypress in the viewer before moving
 
     success = False
 
@@ -84,6 +93,9 @@ def move_to_target(sim: SimInterface, target_pos, target_quat,
                 path = plan_path(sim, q_current, q_goal, **planner_kwargs)
                 if path is None:
                     raise RuntimeError(f"No path found from q_current={q_current} to q_goal={q_goal}")
+                sim.set_joint_angles(q_current)
+                if viewer is not None:
+                    draw_markers(viewer, target_pos, target_quat, path_to_ee_positions(sim, path))
                 break
             else:
                 print(f"Reached waypoint {waypoint}")

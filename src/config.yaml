@@ -1,6 +1,7 @@
 MODEL_PATH: "models/franka_emika_panda/panda_nohand_grav.xml"
 SCENE_EASY_PATH: "models/franka_emika_panda/scene_easy.xml"
 SCENE_NARROW_PATH: "models/franka_emika_panda/scene_narrow.xml"
+SCENE_SHELF_PATH: "models/franka_emika_panda/scene_shelf.xml"
 
 # From model xml
 JOINT_LIMITS_LOW: [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]

@@ -1,11 +1,10 @@
 # panda-mujoco-motion-stack
 
-**STATUS**
-- Kinematics (FK/IK) - Complete
-- Control - Complete
-- Motion Planning - Complete
 
-> Complete kinematics, control and planning stack implemented from scratch on a Franka Emika Panda (7-DOF) in MuJoCo.
+*Complete kinematics, control and planning stack implemented from scratch on a Franka Emika Panda (7-DOF) in MuJoCo.*
+
+
+
 
 **Problem Statement**: [docs/problem_statement.md](docs/problem_statement.md) 
 
@@ -14,7 +13,7 @@
 - Forward kinematics via an explicit transform chain, checked against MuJoCo's own site pose 
 - Damped least-squares (Levenberg-Marquardt) IK over the Jacobian, with multi-start restarts 
 - A task-space PID controller (position + orientation error, damped-pseudoinverse Jacobian) driving the arm to target poses, with gains swept and validated across distance bands 
-- An RRT* motion planner over joint-space configurations, with shortcut-based path smoothing, validated over randomly sampled blocked start/goal pairs 
+- An RRT* motion planner over joint-space configurations, with shortcut-based path smoothing, validated over randomly sampled blocked start/goal pairs. In the full pipeline, the path ends at the exact IK goal (not just within RRT*'s `goal_tol`) whenever that last edge is collision-free 
 
 > - No built-in IK, control, or motion-planning library calls are used for any of the four. 
 > - The transform chain, the Jacobian, the control law, and the planner were implemented directly.
@@ -43,7 +42,8 @@ src/
   orchestrator.py           # move_to_target(): full IK -> plan -> execute pipeline
   transforms.py             # Rotation/homogeneous-transform helper functions
   sim_interface.py          # Thin wrapper around the MuJoCo model/data for joint & pose access
-  config.yaml               # Model path, joint limits, velocity limits, result paths
+  viz.py                    # Visual-only viewer markers: target pose + planned end-effector path
+  config.yaml               # Model/scene paths, joint limits, velocity limits, result paths
 
 utils/
   config.py                 # Loads src/config.yaml into a shared `config` dict
@@ -60,6 +60,11 @@ scripts/
   inspect_model.py          # Prints joint/body/site info for the loaded model
   config/
     params.yaml             # Params for scripts/main.py
+
+models/franka_emika_panda/
+  scene_easy.xml            # Single box obstacle
+  scene_narrow.xml          # Two boxes with a narrow gap
+  scene_shelf.xml           # Tall divider + two-slot shelf (demo scene)
 
 results/                    # CSVs and plots produced by the scripts above
 ```
@@ -85,6 +90,34 @@ python -m scripts.main --params scripts/config/params.yaml
 ```
 
 Target, scene, planner, and controller settings are all read from `scripts/config/params.yaml`; pass `--no-viewer` to run headless.
+
+### Scenes
+
+Set `scene` in `params.yaml` to a key from `src/config.yaml`:
+
+| Key | Scene |
+|---|---|
+| `SCENE_EASY_PATH` | Single box obstacle in front of the robot |
+| `SCENE_NARROW_PATH` | Two boxes with a narrow gap between them |
+| `SCENE_SHELF_PATH` | Tall divider splitting the workspace + a two-slot shelf; crossing between zones forces multi-waypoint detours |
+
+### Target modes
+
+Set `target.mode` in `params.yaml`:
+
+| Mode | What it does |
+|---|---|
+| `sequence` | Visits the targets listed under `target.sequence` in order (`name`, `pos`, `quat` as w, x, y, z). Unreachable targets are skipped. |
+| `interactive` | Drag a target in the viewer and press ENTER to send the arm there; repeats until the viewer is closed. Viewer only. |
+| `fixed` | Single target from `target.pos` / `target.quat`. |
+| `blocked_pair` | Random valid start/goal pair whose straight-line edge is blocked. |
+
+### Viewer
+
+- **Markers** (visual only, no effect on collisions): red sphere + RGB axes = target pose; yellow spheres/lines = planned end-effector path, redrawn on replan.
+- **SPACE** starts the motion when `wait_for_start: true`. The first path is planned and drawn first, then the run waits.
+- `target.pause` holds each planned path on screen for that many seconds before moving.
+- **Interactive mode**: double-click the green target to select it, then **Ctrl + right-drag** to move it and **Ctrl + left-drag** to rotate it. Press **ENTER** to go.
 
 ## Results
 

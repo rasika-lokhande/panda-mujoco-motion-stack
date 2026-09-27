@@ -7,14 +7,26 @@ from utils.config import config
 
 class SimInterface:
 
-    def __init__(self, model_path: str):
-        self.model = mujoco.MjModel.from_xml_path(model_path)
+    def __init__(self, model_path: str, add_target_mocap: bool = False):
+        if add_target_mocap:
+            self.model = self._load_with_target_mocap(model_path)
+        else:
+            self.model = mujoco.MjModel.from_xml_path(model_path)
         self.data = mujoco.MjData(self.model)
         self._load_joint_info()
         self._load_body_info()
         self._load_site_info()
         self.theta_home = [0, 0, 0, -1.57079, 0, 1.57079, -0.7853]
         self.set_joint_angles(self.theta_home) # set to ready pose
+
+    @staticmethod
+    def _load_with_target_mocap(model_path):
+        # Adds a draggable, non-colliding mocap body named "target" (no joints, so qpos is unchanged)
+        spec = mujoco.MjSpec.from_file(model_path)
+        body = spec.worldbody.add_body(name="target", mocap=True)
+        body.add_geom(type=mujoco.mjtGeom.mjGEOM_SPHERE, size=[0.03, 0, 0],
+                      rgba=[0.2, 0.9, 0.3, 0.3], contype=0, conaffinity=0)
+        return spec.compile()
 
     def _load_joint_info(self):
         self.joint_names = [self.model.joint(i).name for i in range(self.model.njnt)]

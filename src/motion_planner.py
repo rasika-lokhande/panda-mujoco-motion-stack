@@ -10,6 +10,7 @@ import mujoco
 from src.kinematics import forward_kinematics
 from src.controller import controller
 from src.transforms import homog_to_R_p, R_to_quat
+from src.q_validity_check import check_edge_validity
 
 
 
@@ -31,6 +32,10 @@ def plan_path(sim, q_start, q_goal, max_retries=5, smoothing: bool = True, rrt_k
     node_path, _ = extract_path(rrt_star_result['end_node'])
 
     q_path = node_to_q_path(node_path)
+
+    # RRT* stops within goal_tol of q_goal; finish at q_goal exactly when that last edge is free
+    if not np.allclose(q_path[-1], q_goal) and check_edge_validity(sim, q_path[-1], q_goal):
+        q_path = list(q_path) + [np.array(q_goal)]
     print(path_smoothness_metric(q_path))
 
     if smoothing:
