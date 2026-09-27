@@ -3,6 +3,7 @@
 
 *Complete kinematics, control and planning stack implemented from scratch on a Franka Emika Panda (7-DOF) in MuJoCo.*
 
+[panda_demo.webm](https://github.com/user-attachments/assets/fbe37cec-a193-480b-a858-48c3305e2e42)
 
 
 
